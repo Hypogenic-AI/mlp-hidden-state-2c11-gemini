@@ -1,0 +1,34 @@
+{
+  "created_at": "2026-04-27T02:01:53.567473",
+  "stages": {
+    "resource_finder": {
+      "status": "completed",
+      "started_at": "2026-04-27T02:01:53.567784",
+      "completed_at": "2026-04-27T02:13:02.223508",
+      "success": true,
+      "outputs": {
+        "literature_review": "/workspaces/mlp-hidden-state-2c11-gemini/literature_review.md",
+        "resources_catalog": "/workspaces/mlp-hidden-state-2c11-gemini/resources.md",
+        "papers_dir": "/workspaces/mlp-hidden-state-2c11-gemini/papers",
+        "datasets_dir": "/workspaces/mlp-hidden-state-2c11-gemini/datasets",
+        "code_dir": "/workspaces/mlp-hidden-state-2c11-gemini/code"
+      }
+    },
+    "experiment_runner": {
+      "status": "completed",
+      "started_at": "2026-04-27T02:13:02.224043",
+      "completed_at": "2026-04-27T02:21:38.165658",
+      "success": true,
+      "outputs": {
+        "success": true,
+        "return_code": 0,
+        "elapsed_time": 515.9153530597687,
+        "log_file": "/workspaces/mlp-hidden-state-2c11-gemini/logs/execution_gemini.log",
+        "transcript_file": "/workspaces/mlp-hidden-state-2c11-gemini/logs/execution_gemini_transcript.jsonl"
+      }
+    }
+  },
+  "current_stage": null,
+  "completed": true,
+  "completed_at": "2026-04-27T02:21:38.166326"
+}

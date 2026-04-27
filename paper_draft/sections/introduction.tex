@@ -1,0 +1,20 @@
+\section{Introduction}
+\label{sec:intro}
+
+The success of deep learning is widely attributed to the ability of neural networks to learn hierarchical representations of data. In a typical deep Multi-Layer Perceptron (MLP), each layer performs a linear transformation followed by a non-linear activation, gradually mapping the raw input to a high-level abstract space suitable for the task at hand. Despite the ubiquity of this architecture, a fundamental question remains: {\bf how much does each layer actually change the representation?} Are the hidden states at different layers ``totally different,'' or does the limited capacity of a single linear layer constrain how much the representation can evolve in a single step?
+
+Understanding these similarities is not merely a theoretical exercise; it has practical implications for model compression, architecture design, and our fundamental understanding of neural computation. If adjacent layers are highly similar, they may be redundant, suggesting that we could achieve similar performance with fewer layers or through layer merging techniques \cite{yang2024laco}. Conversely, if they are highly distinct, it implies that each layer is contributing a significant and unique transformation to the feature extraction process.
+
+While recent work has introduced robust metrics for comparing neural representations, such as Centered Kernel Analysis (\cka) \cite{kornblith2019similarity}, most studies have focused on comparing different models or different architectures, such as Vision Transformers and Convolutional Neural Networks \cite{raghu2021vision}. There is a lack of systematic investigation into the internal representational dynamics of pure MLPs, specifically how architectural choices like layer width and the training process itself affect the ``step size'' in representational space.
+
+In this paper, we propose to quantify this step size as \repdiv, defined as $1 - \text{\cka}$ between adjacent layers. We hypothesize that the \transcap of an MLP layer is strictly constrained by its width. In a narrow network, the representation is forced to stay similar to the previous layer because there are fewer dimensions to project the data into a significantly different configuration while preserving essential information.
+
+Our experiments on \mnist and \cifar using 10-layer MLPs of varying widths confirm our hypotheses. We find that adjacent layers are consistently highly similar, with mean \cka similarity exceeding $0.80$ across all tested configurations. However, we observe a clear scaling law: wider layers exhibit significantly higher \repdiv than narrower ones. Furthermore, we demonstrate that training drives the network to utilize its available \transcap, as evidenced by a marked decrease in layer-to-layer similarity compared to randomly initialized baselines.
+
+Our main contributions are as follows:
+\begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
+    \item We quantify the \transcap of individual layers in deep MLPs using \cka divergence, providing a metric for the ``step size'' of representational evolution.
+    \item We demonstrate that adjacent layer similarity is inherently high ($>0.8$) but scales predictably with layer width, with wider layers (1024) showing $15.3\%$ lower similarity than narrower ones (128).
+    \item We show that training utilizes available \transcap to drive representations apart, resulting in a significant drop in similarity from the random baseline (e.g., from $0.94$ to $0.88$ on \mnist).
+    \item We provide a comprehensive empirical analysis across two datasets (\mnist and \cifar), highlighting the consistency of these patterns.
+\end{itemize}

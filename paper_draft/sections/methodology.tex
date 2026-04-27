@@ -1,0 +1,35 @@
+\section{Methodology}
+\label{sec:method}
+
+We aim to quantify the representational similarity and divergence across layers in deep Multi-Layer Perceptrons (MLPs). Our approach involves training models with varying widths and measuring the similarity between all pairs of layers using linear Centered Kernel Analysis (\cka).
+
+\subsection{Problem Formulation}
+Let $L_i \in \mathbb{R}^{n \times d_i}$ be the matrix of activations at layer $i$ for $n$ input samples, where $d_i$ is the number of neurons in layer $i$. We wish to compute the similarity $S(L_i, L_j)$ between the representations at layer $i$ and layer $j$. Specifically, we focus on {\bf adjacent similarity}, $S(L_i, L_{i+1})$, and {\bf representational divergence}, defined as $1 - S(L_i, L_{i+1})$.
+
+\subsection{Centered Kernel Analysis (\cka)}
+We use linear \cka \cite{kornblith2019similarity} as our primary metric. For activation matrices $X$ and $Y$, \cka is defined as:
+\begin{equation}
+    \text{\cka}(X, Y) = \frac{\text{HSIC}(XX^\top, YY^\top)}{\sqrt{\text{HSIC}(XX^\top, XX^\top) \text{HSIC}(YY^\top, YY^\top)}}
+\end{equation}
+where HSIC is the Hilbert-Schmidt Independence Criterion. For linear kernels, this simplifies to comparing the similarity of the Gram matrices $K = XX^\top$ and $L = YY^\top$ after centering. \cka is invariant to orthogonal transformations and isotropic scaling, which is crucial for comparing layers within a network where representations may be rotated or scaled without changing their information content.
+
+\subsection{Experimental Setup}
+\para{Architectures}
+We use a 10-layer MLP architecture (DeepMLP) with a fixed number of hidden layers. To investigate the effect of width on \transcap, we test three hidden layer widths: $128, 512,$ and $1024$. All models use ReLU activations.
+
+\para{Datasets}
+We conduct experiments on two standard classification datasets:
+\begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
+    \item \dsmnist: $28 \times 28$ grayscale images of handwritten digits.
+    \item \dscifar: $32 \times 32 \times 3$ color images of 10 object classes.
+\end{itemize}
+
+\para{Training Protocol}
+Models are initialized using standard PyTorch defaults. For each configuration, we extract activations for 1000 test samples in two states:
+\begin{enumerate}
+    \item {\bf Random}: The untrained state immediately after initialization.
+    \item {\bf Trained}: After 5 epochs of training using the Adam optimizer with a learning rate of $10^{-3}$, which was sufficient for convergence and achieving reasonable accuracy ($>95\%$ on \mnist).
+\end{enumerate}
+
+\subsection{Evaluation Protocol}
+For each model and state, we compute the full $10 \times 10$ \cka similarity matrix across all hidden layers. We then extract the mean adjacent \cka (average of $S(L_i, L_{i+1})$ for $i=1 \dots 9$) and the first-to-last layer similarity $S(L_1, L_{10})$ as summary statistics. We define \transcap as the ability of a layer to decrease similarity from its predecessor, measured by the magnitude of \repdiv.

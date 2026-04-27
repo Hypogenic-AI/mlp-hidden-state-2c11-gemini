@@ -1,0 +1,16 @@
+\section{Related Work}
+\label{sec:related}
+
+The study of representational similarity in neural networks has been a fertile ground for research into interpretability and model optimization. Our work builds upon several key areas of research.
+
+\para{Similarity Metrics}
+Measuring the similarity between neural representations is challenging due to the high dimensionality and the potential for linear or orthogonal transformations that preserve information but change the raw activation values. \citet{morcos2018insights} introduced Projection Weighted Canonical Correlation Analysis (PWCCA) to address these issues, finding that networks that generalize well tend to converge to similar representations. However, \citet{kornblith2019similarity} demonstrated that CCA-based metrics can be sensitive to noise and proposed Centered Kernel Analysis (\cka) as a more robust alternative. \cka is invariant to orthogonal transformations and isotropic scaling, making it the de facto standard for comparing representations across layers and models. We utilize linear \cka as our primary metric for internal layer comparison.
+
+\para{Representation Evolution and Architecture}
+How representations evolve across layers has been investigated in various architectural contexts. \citet{raghu2021vision} compared Vision Transformers (ViTs) and Convolutional Neural Networks (CNNs), revealing that ViTs maintain more uniform representations across layers, largely due to residual connections and global attention. In contrast, CNNs show a more distinct hierarchical progression. Our work focuses on pure MLPs, which serve as the fundamental building blocks for many modern architectures, to understand the baseline ``transformation capacity'' of a single linear layer without the influence of specialized inductive biases like convolutions or attention.
+
+\para{Redundancy and Layer Collapse}
+The high similarity between layers suggests potential redundancy. \citet{yang2024laco} proposed Layer Collapse (LaCo) as a method for pruning Large Language Models (LLMs) by merging similar layers, demonstrating that many rear layers in deep models can be collapsed without significant performance loss. Similarly, \citet{shenk2019spectral} used spectral analysis to define layer saturation, showing that representations often become low-dimensional in deeper layers. Our work complements these findings by quantifying how architectural parameters, specifically layer width, determine the inherent limits of these transformations.
+
+\para{Theoretical Constraints}
+From a theoretical perspective, the transformation capacity of a layer is bounded by its rank and the non-linearity applied. Our empirical results align with the intuition that narrower layers are more constrained in their ability to modify the input manifold while maintaining task-relevant information. By measuring \repdiv across different widths, we provide an empirical grounding for these constraints.

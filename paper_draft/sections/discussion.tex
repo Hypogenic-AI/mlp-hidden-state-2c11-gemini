@@ -1,0 +1,21 @@
+\section{Discussion}
+\label{sec:discussion}
+
+Our investigation into the representational dynamics of deep MLPs reveals that layer similarity is a fundamental property of the architecture, constrained by width and modulated by training.
+
+\para{Interpretation of Transformation Capacity}
+We introduced the concept of \transcap as the ability of a layer to diverge from the representation of its predecessor. Our results show that this capacity is not fully utilized in randomly initialized networks and is limited by the layer width. In narrow networks (width 128), the high adjacent \cka ($>0.93$) suggests that the representation is largely preserved across layers, implying significant redundancy. This redundancy is partially reduced through training, but the bottleneck remains. Wider networks, by contrast, possess the dimensionality required to perform more substantial re-configurations of the input space at each step.
+
+\para{Implications for Model Design and Compression}
+The high degree of similarity between adjacent layers, especially in narrow or untrained networks, suggests that deep MLPs may be over-parameterized in terms of depth. If adjacent layers are nearly identical, they could potentially be merged or pruned with minimal impact on performance, as suggested by \citet{yang2024laco}. Our findings provide a quantitative basis for identifying such redundancies: layers with \cka similarity above a certain threshold (e.g., $0.95$) are prime candidates for compression.
+
+\para{Limitations}
+{\bf What are the boundaries of our findings?} First, we primarily tested ReLU activation functions. Other activations with different saturation properties, such as GELU or Tanh, might exhibit different similarity patterns. Second, our study was limited to 10-layer MLPs. In extremely deep networks (e.g., $>100$ layers), we might observe "representation collapse" or different asymptotic behavior. Finally, we focused on classification tasks; the representational dynamics in generative or self-supervised tasks might differ significantly.
+
+\para{Future Work}
+Building on these results, we identify several promising directions:
+\begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
+    \item {\bf Layer Merging}: Evaluating the performance impact of merging layers with high \cka similarity.
+    \item {\bf Residual Connections}: Investigating how skip-connections affect \transcap. While they propagate features (increasing similarity), they also allow for more complex transformations in the residual branch.
+    \item {\bf Transformer blocks}: Comparing the behavior of MLPs within Transformers to our standalone results, particularly the effect of the surrounding attention mechanism and normalization layers.
+\end{itemize}

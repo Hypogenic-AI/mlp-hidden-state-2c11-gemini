@@ -1,0 +1,498 @@
+You are an academic paper writer. Generate a complete NEURIPS style paper
+based on the experiment results provided.
+
+════════════════════════════════════════════════════════════════════════════════
+                         IMPORTANT: BEFORE YOU START
+════════════════════════════════════════════════════════════════════════════════
+
+Before writing any content, you MUST complete these steps:
+
+1. READ THE SKILL: Review the paper-writer skill at .gemini/skills/paper-writer/SKILL.md
+2. READ THE STYLE GUIDE: Study templates/paper_writing/lab_style_guide.md carefully
+3. REVIEW EXAMPLES: Browse paper_examples/ for formatting and language patterns:
+   - Look at sections/1.introduction.tex for language style
+   - Look at tables/*.tex for table formatting
+   - Look at commands/*.tex for macro usage
+4. VERIFY COMMAND TEMPLATES: Command templates (math.tex, general.tex, macros.tex) are pre-copied to paper_draft/commands/
+
+CRITICAL: Reference example papers for FORMATTING and LANGUAGE STYLE only.
+Do NOT copy content, phrasing, or narrative structure from the example papers.
+The examples are in a different research domain - focus only on presentation style.
+
+════════════════════════════════════════════════════════════════════════════════
+                            EXPERIMENT REPORT
+════════════════════════════════════════════════════════════════════════════════
+
+# Research Report: Similarity of MLP Hidden States
+
+## 1. Executive Summary
+This research investigated the representational similarity of hidden states across different layers in deep Multi-Layer Perceptrons (MLPs). Using Centered Kernel Analysis (CKA) as a metric, we tested the hypothesis that hidden spaces at different layers are not &#34;totally different&#34; due to limited transformation capacity of individual layers.
+
+Our experiments on MNIST and CIFAR-10 revealed that:
+1. **Adjacent layers are highly similar**: Mean CKA similarity between adjacent layers consistently exceeded 0.80, confirming that individual layers perform incremental transformations.
+2. **Width scales transformation capacity**: Increasing the width of MLP layers allows them to perform more significant transformations, resulting in lower adjacent similarity (higher divergence).
+3. **Training drives divergence**: Trained networks show significantly lower layer-to-layer similarity compared to randomly initialized networks, indicating that the network learns to utilize its transformation capacity to extract features.
+
+## 2. Research Question &amp; Motivation
+**Research Question**: How similar are MLP hidden states to each other across layers? Are they &#34;totally different,&#34; or does the limited capacity of a single linear layer constrain how much the representation can change?
+
+**Motivation**: Understanding these similarities informs model compression, architecture design, and our fundamental understanding of how deep networks build abstractions. If layers are highly similar, they may be redundant.
+
+## 3. Methodology
+### Approach
+We trained deep (10-layer) MLPs with varying widths on MNIST and CIFAR-10. We used **Linear CKA** to measure the similarity between all pairs of layers.
+
+### Tools &amp; Resources
+- **Framework**: PyTorch 2.11
+- **Metric**: Linear CKA (implemented in `src/analyze.py`)
+- **Datasets**: MNIST and CIFAR-10
+- **Models**: DeepMLP (10 hidden layers, widths: 128, 512, 1024)
+
+### Experimental Protocol
+1. Initialize a 10-layer MLP.
+2. Save &#34;Random&#34; (untrained) state.
+3. Train for 5 epochs (to ensure convergence/learning).
+4. Extract activations for 1000 test samples.
+5. Compute the $10 \times 10$ CKA similarity matrix.
+
+## 4. Results
+
+### Key Statistics
+| Model Configuration | Mean Adj. CKA | First-Last Layer CKA |
+|---------------------|---------------|----------------------|
+| MNIST (Random, 512) | 0.9400        | 0.5558               |
+| MNIST (Trained, 128)| 0.9352        | 0.4449               |
+| MNIST (Trained, 512)| 0.8831        | 0.2736               |
+| MNIST (Trained, 1024)| 0.8508       | 0.2567               |
+| CIFAR10 (Trained, 512)| 0.8264      | 0.2131               |
+
+### Visualizations
+Heatmaps and line plots are available in the `figures/` directory:
+- `mnist_h512_l10_relu_s42_trained_cka_heatmap.png`: Shows the block-diagonal structure of similarity.
+- `mnist_h512_l10_relu_s42_trained_adjacent_cka.png`: Shows how similarity evolves with depth.
+
+## 5. Analysis &amp; Discussion
+### Hypothesis Testing
+- **Hypothesis 1 (Adjacent Similarity)**: Confirmed. Mean Adjacent CKA was always &gt; 0.8.
+- **Hypothesis 2 (Transformation Capacity)**: Confirmed. We defined &#34;transformation capacity&#34; as the ability to decrease similarity from the previous layer ($1 - \text{CKA}$). 
+- **Hypothesis 3 (Width Effect)**: Confirmed. Wider layers (1024) showed significantly lower adjacent CKA (0.85) than narrower layers (128, CKA 0.93), meaning width directly increases the &#34;step size&#34; in representational space.
+
+### Interpretation
+The &#34;transformation capacity&#34; of an MLP layer is constrained by its width. In a narrow network, the representation is forced to stay similar to the previous layer because there aren&#39;t enough dimensions to project the data into a significantly different configuration while maintaining the required information. Training &#34;uses up&#34; this capacity to create distinct features, as seen by the drop in similarity from the random baseline.
+
+## 6. Limitations
+- **Activation Functions**: We primarily tested ReLU. Different activations (GELU, Tanh) might show different saturation patterns.
+- **Depth**: We limited testing to 10 layers. Extremely deep networks (&gt;100 layers) might show different &#34;collapse&#34; behavior.
+- **Task Complexity**: We only used classification tasks.
+
+## 7. Conclusions &amp; Next Steps
+We conclude that MLP hidden states are **not** totally different; they are highly constrained by the linear transformation capacity of individual layers. However, the &#34;difference&#34; is measurable and scales with layer width and task complexity.
+
+**Recommended Follow-up**:
+1. Test **Layer Collapse**: Can we merge layers with CKA &gt; 0.95 without losing accuracy?
+2. Investigate **Residual Connections**: Do Skip-connections increase or decrease this layer-to-layer divergence?
+3. Compare with **Transformer MLPs**: Do the MLPs in Transformers behave differently due to the surrounding attention mechanism?
+
+
+════════════════════════════════════════════════════════════════════════════════
+                            RESEARCH PLAN
+════════════════════════════════════════════════════════════════════════════════
+
+# Research Plan: How similar are MLP hidden states to each other?
+
+## Motivation &amp; Novelty Assessment
+
+### Why This Research Matters
+Understanding the similarity between hidden states across layers is crucial for interpreting how neural networks learn and process information. If layers are highly redundant, we can compress models without significant loss. If they are highly distinct, we can better understand the hierarchy of features. This research specifically addresses the &#34;transformation capacity&#34; of individual layers—how much a single layer *can* actually change the representation.
+
+### Gap in Existing Work
+Most representation similarity studies (like CKA) focus on comparing different models or Comparing ViTs vs CNNs. There is less focused work on the *rate of change* of representations in pure, deep MLPs and how architectural constraints (like width and depth) impact this rate. We want to quantify the &#34;step size&#34; in representational space between adjacent layers.
+
+### Our Novel Contribution
+We will measure the &#34;Representational Divergence&#34; (1 - CKA) across layers in deep MLPs. We will investigate:
+1. How divergence changes with depth (does it saturate?).
+2. How width affects the ability of a layer to &#34;change&#34; the representation.
+3. Whether a trained MLP has significantly different layer-to-layer similarity patterns compared to a random one.
+
+### Experiment Justification
+- **Experiment 1: Layer-wise CKA Matrix**: To visualize the overall similarity structure of the network. High diagonal values would support the hypothesis that layers aren&#39;t &#34;totally different.&#34;
+- **Experiment 2: Width/Depth Sensitivity**: To see if wider layers have more &#34;transformation capacity&#34; (higher divergence from previous layer).
+- **Experiment 3: Trained vs. Random**: To distinguish between architectural bias and learned representational drift.
+
+---
+
+## Research Question
+The hidden spaces of MLPs at different layers are not totally different due to limited individual transformation capacity, but there are measurable differences between them that can be compared.
+
+## Hypothesis Decomposition
+1. **Adjacent Layer Similarity**: Adjacent layers in a deep MLP will show high CKA similarity (&gt;0.8).
+2. **Transformation Capacity**: Divergence (1 - CKA) will be higher in earlier layers and decrease (saturate) in later layers.
+3. **Width Effect**: Increasing layer width will increase the &#34;transformation capacity,&#34; leading to lower similarity between adjacent layers (higher divergence).
+
+## Proposed Methodology
+
+### Approach
+We will train deep MLPs on the MNIST and CIFAR-10 datasets. We will use Linear CKA as the primary metric to compare hidden states across all pairs of layers.
+
+### Experimental Steps
+1. **Model Training**: 
+   - Train a 10-layer MLP (width 512) on MNIST.
+   - Train a 10-layer MLP (width 512) on CIFAR-10.
+   - Keep checkpoints for &#34;untrained&#34; (random) baselines.
+2. **Activation Extraction**: Pass a test set (1000 samples) through the models and save the activations for each layer.
+3. **Similarity Analysis**:
+   - Compute the full CKA similarity matrix for each model.
+   - Extract the &#34;Adjacent CKA&#34; (similarity between layer $i$ and $i+1$).
+   - Compute &#34;Cumulative CKA&#34; (similarity between layer 1 and layer $i$).
+4. **Width/Depth Ablation**:
+   - Compare a 512-wide MLP with a 128-wide and 2048-wide MLP.
+5. **Visualization**: Plot heatmaps of similarity matrices and line plots of adjacent similarity across depth.
+
+### Baselines
+- **Random Initialization**: Compare trained patterns with a randomly initialized (but same architecture) network.
+- **Identity Transform**: A theoretical upper bound of similarity (CKA = 1).
+
+### Evaluation Metrics
+- **Linear CKA**: Primary similarity metric.
+- **Representational Divergence**: $1 - \text{CKA}$.
+- **Accuracy**: To ensure the models are actually learning.
+
+### Statistical Analysis Plan
+- We will report mean and standard deviation across 3 different random seeds for training.
+- We will use t-tests to compare divergence between early and late layers.
+
+## Expected Outcomes
+- We expect to see high similarity (&gt;0.9) between adjacent layers in the middle of the network.
+- We expect trained networks to show *more* divergence in earlier layers compared to random networks, as they learn to extract features.
+
+## Timeline and Milestones
+- **Phase 1-2**: Planning &amp; Setup (Complete)
+- **Phase 3**: Implementation (Scripts for training and CKA) - 1 hour
+- **Phase 4**: Experiments (Running multiple models) - 1.5 hours
+- **Phase 5**: Analysis (Visualization and Interpretation) - 1 hour
+- **Phase 6**: Documentation (Final Report) - 30 min
+
+## Potential Challenges
+- **GPU memory**: Extracting all activations for 1000 samples across 20 layers might be heavy. We will process in batches or use smaller sample sizes (N=500 is often enough for CKA).
+- **Metric Sensitivity**: CKA might be *too* high if we use ReLU (many zeros). We&#39;ll test with GeLU or compare with/without activations.
+
+## Success Criteria
+- Successful generation of CKA heatmaps for at least 2 architectures and 2 datasets.
+- Clear quantification of &#34;Transformation Capacity&#34; as a function of depth and width.
+
+
+════════════════════════════════════════════════════════════════════════════════
+                          LITERATURE REVIEW
+════════════════════════════════════════════════════════════════════════════════
+
+# Literature Review: Similarity of MLP Hidden States
+
+## Research Area Overview
+The similarity of hidden states across different layers in neural networks (especially MLPs and Transformers) is a key area of study for understanding how representations evolve during processing. Measuring this similarity helps in model pruning, interpretability, and understanding generalization.
+
+## Key Papers
+
+### 1. Similarity of Neural Network Representations Revisited (CKA)
+- **Authors**: Simon Kornblith, Mohammad Norouzi, Honglak Lee, Geoffrey E. Hinton
+- **Year**: 2019
+- **Source**: ICML
+- **Key Contribution**: Introduces Centered Kernel Alignment (CKA) as a robust similarity metric for neural representations.
+- **Methodology**: CKA compares the similarity of representational similarity matrices (RSMs). It is invariant to orthogonal transformation and isotropic scaling.
+- **Results**: CKA reliably identifies correspondences between layers of different models, unlike CCA or other metrics. It shows that representations in the same model are often similar across nearby layers.
+- **Relevance**: Provides the primary metric (Linear CKA) for comparing hidden states.
+
+### 2. LaCo: Large Language Model Pruning via Layer Collapse
+- **Authors**: Yifei Yang, Zouying Cao, Hai Zhao
+- **Year**: 2024
+- **Source**: arXiv
+- **Key Contribution**: Proposes &#34;Layer Collapse&#34; (LaCo) for pruning LLMs by collapsing rear layers into prior layers.
+- **Methodology**: Uses layer-wise similarity (CKA) to justify that many layers are redundant and can be merged.
+- **Results**: Shows that many layers in deep LLMs have very high similarity, especially in the later stages of the model.
+- **Relevance**: Directly supports the hypothesis that MLP/Transformer layers have high similarity and measurable differences.
+
+### 3. Do Vision Transformers See Like Convolutional Neural Networks?
+- **Authors**: Maithra Raghu, Thomas Unterthiner, Simon Kornblith, Chiyuan Zhang, Alexey Dosovitskiy
+- **Year**: 2021
+- **Source**: NeurIPS
+- **Key Contribution**: Compares internal representations of ViT and CNN.
+- **Results**: ViTs have much more uniform representations across layers compared to CNNs. Residual connections in ViTs play a huge role in propagating features and maintaining similarity.
+- **Relevance**: Suggests that MLP-like structures (blocks in Transformers) may maintain higher similarity across layers than traditional CNNs.
+
+### 4. Spectral Analysis of Latent Representations
+- **Authors**: Justin Shenk, Mats L. Richter, Anders Arpteg, Mikael Huss
+- **Year**: 2019
+- **Source**: arXiv
+- **Key Contribution**: Defines &#34;Layer Saturation&#34; based on the variance explained by eigenvalues.
+- **Relevance**: Provides another perspective on similarity/redundancy—if multiple layers have similar &#34;saturation,&#34; they might be performing similar transformations.
+
+### 5. Insights on representational similarity in neural networks with canonical correlation (PWCCA)
+- **Authors**: Ari S. Morcos, Maithra Raghu, Samy Bengio
+- **Year**: 2018
+- **Source**: NeurIPS
+- **Key Contribution**: Improves upon SVCCA with Projection Weighted CCA (PWCCA).
+- **Results**: Found that networks converge to similar representations if they generalize well.
+- **Relevance**: Foundations of using CCA-based metrics for layer comparison.
+
+## Common Methodologies
+- **CKA (Centered Kernel Alignment)**: Most popular for comparing across models and layers.
+- **Canonical Correlation Analysis (CCA/SVCCA/PWCCA)**: Used for finding linear subspaces that correlate.
+- **Model Stitching**: A functional way to measure similarity—if layer A can be swapped with layer B (with a small transformation), they are similar.
+
+## Standard Baselines
+- **Linear Probing**: Measuring if the same information can be extracted from different layers.
+- **Representation Similarity Matrices (RSMs)**: Computing the pairwise similarity of inputs at each layer.
+
+## Evaluation Metrics
+- **Linear CKA Score**: (0 to 1), where 1 is identical representation (up to scaling/rotation).
+- **Layer Saturation**: Dimensionality of the representation.
+- **Stitching Accuracy**: Performance drop when swapping layers.
+
+## Recommendations for Our Experiment
+- **Dataset**: CIFAR-10 (standard), TinyStories (for LLM-like MLPs).
+- **Models**: Simple MLPs with varying depths (e.g., 5, 10, 20 layers) and widths.
+- **Analysis**:
+    1. Compute CKA between every pair of layers (i, j).
+    2. Visualize similarity matrices.
+    3. Test &#34;Layer Collapse&#34; (swapping/merging layers) to see functional similarity.
+    4. Measure Layer Saturation to see if representations &#34;compress&#34; or &#34;expand.&#34;
+
+
+════════════════════════════════════════════════════════════════════════════════
+                          PAPER REQUIREMENTS
+════════════════════════════════════════════════════════════════════════════════
+
+Generate a complete academic paper with the following structure:
+
+1. TITLE
+   - Clear, specific, informative
+   - Should convey main finding or contribution
+
+2. AUTHOR
+   - Use this exact author line in the \author{} block: Ari Holtzman and NeuriCo
+
+3. ABSTRACT (150-250 words)
+   - Problem statement
+   - Approach
+   - Key results
+   - Significance
+
+4. INTRODUCTION
+   - Research problem and motivation
+   - Gap in existing work
+   - Our contribution (be specific)
+   - Paper organization
+
+5. RELATED WORK
+   - Organized by theme/approach
+   - Position our work relative to prior work
+   - Cite papers from literature review
+
+6. METHODOLOGY
+   - Clear description of approach
+   - Experimental setup
+   - Datasets used
+   - Evaluation metrics
+   - Baselines
+
+7. RESULTS
+   - Present results with tables and figures
+   - Statistical analysis
+   - Comparison to baselines
+   - Ablation studies (if applicable)
+
+8. DISCUSSION
+   - Interpretation of results
+   - Limitations
+   - Broader implications
+
+9. CONCLUSION
+   - Summary of contributions
+   - Key findings
+   - Future work
+
+10. REFERENCES
+   - BibTeX format
+   - All cited papers
+
+════════════════════════════════════════════════════════════════════════════════
+                          OUTPUT FORMAT
+════════════════════════════════════════════════════════════════════════════════
+
+Create a MODULAR LaTeX project with the following directory structure:
+
+paper_draft/
+├── main.tex              # Main file that imports all sections
+├── references.bib        # BibTeX references
+├── sections/
+│   ├── abstract.tex      # Abstract content
+│   ├── introduction.tex  # Introduction section
+│   ├── related_work.tex  # Related work section
+│   ├── methodology.tex   # Methodology section
+│   ├── results.tex       # Results section
+│   ├── discussion.tex    # Discussion section
+│   └── conclusion.tex    # Conclusion section
+├── figures/              # Directory for any generated figures
+├── tables/               # Directory for complex standalone tables
+└── appendix/             # Directory for appendix sections (if needed)
+
+INSTRUCTIONS:
+1. First, create the directory structure above (mkdir -p paper_draft/sections paper_draft/figures paper_draft/tables paper_draft/appendix)
+2. Write main.tex using the EXACT preamble for NEURIPS:
+
+   \documentclass{article}
+   \usepackage[final]{neurips_2025}  % NEURIPS style (neurips_2025.sty is in paper_draft/)
+   \usepackage[hidelinks]{hyperref}  % REQUIRED: clickable links
+   \usepackage{booktabs}  % REQUIRED: professional tables
+   \usepackage{graphicx}
+   \usepackage{amsmath,amssymb}
+
+   % Import command files
+   \input{commands/math}
+   \input{commands/general}
+   \input{commands/macros}
+
+   % Use this bibliography style:
+   \bibliographystyle{plainnat}
+
+   \author{Ari Holtzman and NeuriCo}
+
+   - Use \input{sections/...} to include each section
+   - Use \bibliography{references} for references
+3. Write each section file with COMPLETE content (no placeholders)
+4. Each section file should include its \section{} command
+5. Write references.bib with all citations in BibTeX format
+6. After writing all files, compile the paper:
+   cd paper_draft && pdflatex -interaction=nonstopmode main.tex && bibtex main && pdflatex -interaction=nonstopmode main.tex && pdflatex -interaction=nonstopmode main.tex
+
+This modular structure allows humans to easily:
+- Edit individual sections without navigating a large file
+- Track changes per section
+- Reuse sections across different paper versions
+
+════════════════════════════════════════════════════════════════════════════════
+                          QUALITY REQUIREMENTS
+════════════════════════════════════════════════════════════════════════════════
+
+- Academic tone throughout
+- All claims must be supported by data from the experiment report
+- Proper citations using \cite{} commands
+- Clear figures and tables with proper captions
+- NO placeholder text - every section must have real content
+- The paper MUST compile without errors
+- If compilation fails, debug and fix the LaTeX errors
+
+════════════════════════════════════════════════════════════════════════════════
+                          LAB WRITING STYLE
+════════════════════════════════════════════════════════════════════════════════
+
+Follow these lab-specific conventions to match our paper style:
+
+1. LANGUAGE STYLE:
+   - Use active voice: "We propose", "We examine", "We focus on"
+   - Be direct and confident: "Our main question is...", "We hypothesize that..."
+   - State things clearly and simply - prefer plain language over jargon
+   - Use bold questions as paragraph organizers: {\bf what is X?}
+   - Include specific quantitative claims: "8.97% over baseline"
+   - Avoid fancy wording: "utilize" → "use", "facilitate" → "help"
+
+2. INTRODUCTION STRUCTURE:
+   - Engaging hook (get to the point quickly)
+   - Problem importance
+   - Gap identification
+   - Your approach with method figure reference
+   - Quantitative preview of results
+   - Contribution bullets (3-4 items, action verbs)
+
+3. CONTRIBUTION LISTS:
+   \begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
+       \item We propose...
+       \item We conduct...
+       \item We complement...
+   \end{itemize}
+
+4. MODULAR COMMANDS STRUCTURE:
+   Command templates are pre-copied to paper_draft/commands/:
+   - math.tex: Math notation macros
+   - general.tex: Formatting macros
+   - macros.tex: Project-specific term definitions (customize this for your paper)
+
+   In main.tex, include:
+   \input{commands/math}
+   \input{commands/general}
+   \input{commands/macros}
+
+5. REFERENCE CONVENTIONS:
+   Use reference macros from math.tex:
+   - \figref{fig:name} for "figure 1" (lowercase, in-sentence)
+   - \Figref{fig:name} for "Figure 1" (capitalized, start of sentence)
+   - \secref{sec:name} for "section 2"
+
+6. TEXT FORMATTING:
+   - Use \para{Header text} for bold paragraph headers
+   - Define method/dataset names with \textsc and \xspace:
+     \newcommand{\methodname}{\textsc{MethodName}\xspace}
+
+7. TABLE FORMATTING:
+   - Use booktabs package (no vertical lines)
+   - Use \resizebox{\textwidth}{!}{...} for wide tables
+   - Use @{} to remove padding at table edges
+   - Use \cmidrule(lr){x-y} for sub-headers
+   - Use \textsc{} for dataset/method names in headers
+   - Bold best results with {\bf ...}
+
+8. FIGURE FORMATTING:
+   - Use 0.32\textwidth for 3-column subfigures
+   - Use 0.95\linewidth for full-width figures
+   - Use \input{figures/legend} for shared legends
+   - Write self-contained captions explaining key observations
+
+9. RESULTS PRESENTATION:
+   - Define \increase and \decrease for colored arrows (green up, red down)
+   - Bold best results in tables
+   - Report confidence intervals when available
+
+10. ALGORITHM STYLING:
+    - Use algpseudocode with [noend]
+    - Use \triangleright for comments
+
+11. HYPERLINKS (REQUIRED):
+    - Always use \usepackage[hidelinks]{hyperref} or with colored links
+    - All citations, section refs, figure refs, table refs must be clickable
+    - This is essential for reader navigation
+
+════════════════════════════════════════════════════════════════════════════════
+                          WORKFLOW: REVIEW AND REFLECT
+════════════════════════════════════════════════════════════════════════════════
+
+Before calling finish, you MUST complete these review steps:
+
+1. REVIEW RESOURCES (at the start):
+   - Read .gemini/skills/paper-writer/SKILL.md for detailed guidance
+   - Study templates/paper_writing/lab_style_guide.md for style conventions
+   - Browse paper_examples/ for formatting and language patterns
+
+2. SELF-REFLECTION (before finishing):
+   After writing all sections, review your work against these criteria:
+
+   LANGUAGE CHECK:
+   - [ ] Is the writing clear and jargon-free?
+   - [ ] Are claims specific with quantitative support?
+   - [ ] Is active voice used throughout?
+
+   FORMATTING CHECK:
+   - [ ] Does main.tex include \input{commands/math}, \input{commands/general}, \input{commands/macros}?
+   - [ ] Is hyperref package included for clickable references?
+   - [ ] Do tables use booktabs (no vertical lines)?
+   - [ ] Are best results bolded in tables?
+   - [ ] Are figures/tables properly captioned?
+
+   STRUCTURE CHECK:
+   - [ ] Does introduction follow: hook → importance → gap → approach → preview → contributions?
+   - [ ] Are contribution bullets specific with action verbs?
+   - [ ] Does the paper compile without errors?
+
+3. FIX ISSUES:
+   - Address any issues found in the self-reflection
+   - Re-compile and verify the PDF looks correct
+
+Only after completing this review should you consider the paper finished.
